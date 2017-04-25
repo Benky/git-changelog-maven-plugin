@@ -122,6 +122,10 @@ public class RepositoryProcessor {
                         childWalk.markUninteresting(childWalk.parseCommit(parent));
                         childWalk.next();
                         for (RevCommit childCommit : childWalk) {
+                            currentTag = tagMapping.getOrDefault(childCommit.getId(), currentTag);
+                            if (tagMapping.containsKey(childCommit.getId())) {
+                                tags.add(currentTag);
+                            }
                             final CommitWrapper childWrapper = processCommit(childCommit);
                             if (commitFilter.test(childCommit) && isInPath(repository, walk, commit) && !(deduplicateChildCommits && Objects.equals(commitWrapper.getTitle(), childWrapper.getTitle()))) {
                                 commitWrapper.getChildren().add(childWrapper);
