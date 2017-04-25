@@ -104,10 +104,7 @@ public class RepositoryProcessor {
 
             RevCommit commit = walk.parseCommit(head);
             while (commit != null) {
-                currentTag = tagMapping.getOrDefault(commit.getId(), currentTag);
-                if (tagMapping.containsKey(commit.getId())) {
-                    tags.add(currentTag);
-                }
+                currentTag = currentTagResolver(tags, tagMapping, currentTag, commit);
                 final CommitWrapper commitWrapper = processCommit(commit);
 
                 if (commitFilter.test(commit) && isInPath(repository, walk, commit)) {
@@ -122,10 +119,7 @@ public class RepositoryProcessor {
                         childWalk.markUninteresting(childWalk.parseCommit(parent));
                         childWalk.next();
                         for (RevCommit childCommit : childWalk) {
-                            currentTag = tagMapping.getOrDefault(childCommit.getId(), currentTag);
-                            if (tagMapping.containsKey(childCommit.getId())) {
-                                tags.add(currentTag);
-                            }
+                            currentTag = currentTagResolver(tags, tagMapping, currentTag, childCommit);
                             final CommitWrapper childWrapper = processCommit(childCommit);
                             if (commitFilter.test(childCommit) && isInPath(repository, walk, commit) && !(deduplicateChildCommits && Objects.equals(commitWrapper.getTitle(), childWrapper.getTitle()))) {
                                 commitWrapper.getChildren().add(childWrapper);
@@ -141,6 +135,14 @@ public class RepositoryProcessor {
         }
 
         return tags;
+    }
+
+    private TagWrapper currentTagResolver(List<TagWrapper> tags, Map<ObjectId, TagWrapper> tagMapping, TagWrapper currentTag, RevCommit childCommit) {
+        currentTag = tagMapping.getOrDefault(childCommit.getId(), currentTag);
+        if (tagMapping.containsKey(childCommit.getId())) {
+            tags.add(currentTag);
+        }
+        return currentTag;
     }
 
     private Map<ObjectId, TagWrapper> extractTags(Repository repository, RevWalk walk) throws IOException {
