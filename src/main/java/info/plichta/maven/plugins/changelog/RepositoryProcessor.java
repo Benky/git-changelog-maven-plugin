@@ -115,28 +115,33 @@ public class RepositoryProcessor {
             if (commitFilter.test(commit) && isInPath(repository, walk, commit)) {
                 currentTag.getCommits().add(commitWrapper);
             }
-            final RevCommit[] parents = commit.getParents();
-            if (parents != null && parents.length > 0) {
-                final RevCommit parent = walk.parseCommit(parents[0]);
-
-                try (RevWalk childWalk = new RevWalk(repository)) {
-                    childWalk.markStart(childWalk.parseCommit(commit));
-                    childWalk.markUninteresting(childWalk.parseCommit(parent));
-                    childWalk.next();
-                    for (RevCommit childCommit : childWalk) {
-                        currentTag = currentTagResolver(tags, tagMapping, currentTag, childCommit);
-                        final CommitWrapper childWrapper = processCommit(childCommit);
-                        if (commitFilter.test(childCommit) && isInPath(repository, walk, commit) && !(deduplicateChildCommits && Objects.equals(commitWrapper.getTitle(), childWrapper.getTitle()))) {
-                            commitWrapper.getChildren().add(childWrapper);
-                        }
-                    }
-                }
-                commit = parent;
-            } else {
-                commit = null;
-            }
+            commit = getChildCommits(repository, walk, commit, commitWrapper);
         }
         return tags;
+    }
+
+    private RevCommit getChildCommits(Repository repository, RevWalk walk, RevCommit commit, CommitWrapper commitWrapper) throws IOException {
+        final RevCommit[] parents = commit.getParents();
+        if (parents != null && parents.length > 0) {
+            final RevCommit parent = walk.parseCommit(parents[0]);
+
+            try (RevWalk childWalk = new RevWalk(repository)) {
+                childWalk.markStart(childWalk.parseCommit(commit));
+                childWalk.markUninteresting(childWalk.parseCommit(parent));
+                childWalk.next();
+                for (RevCommit childCommit : childWalk) {
+                    final CommitWrapper childWrapper = processCommit(childCommit);
+
+                    if (commitFilter.test(childCommit) && isInPath(repository, walk, commit) && !(deduplicateChildCommits && Objects.equals(commitWrapper.getTitle(), childWrapper.getTitle()))) {
+                        commitWrapper.getChildren().add(childWrapper);
+                    }
+                }
+            }
+            commit = parent;
+        } else {
+            commit = null;
+        }
+        return commit;
     }
 
     private TagWrapper currentTagResolver(List<TagWrapper> tags, Map<ObjectId, TagWrapper> tagMapping,

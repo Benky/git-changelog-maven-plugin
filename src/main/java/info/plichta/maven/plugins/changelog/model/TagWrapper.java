@@ -38,4 +38,12 @@ public class TagWrapper {
     public List<CommitWrapper> getCommits() {
         return commits;
     }
+
+    @Override
+    public String toString() {
+        return "TagWrapper{" +
+                "name='" + name + '\'' +
+                ", commits=" + commits.size() +
+                '}';
+    }
 }
